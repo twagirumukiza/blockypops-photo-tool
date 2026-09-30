@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlockyPops – Éditeur</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1a0f;--card:#1a2a1a;--text:#e8f5e9;--muted:#a0b8a0;--acc:#5cdb5c;--acc2:#ffd54f;--bd:#2a4a2a;--hd:#0a150a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+header{background:var(--hd);padding:1rem 1.5rem;border-bottom:3px solid var(--bd)}
+header h1{font-family:'Press Start 2P',monospace;font-size:.9rem;line-height:1.5}
+header p{color:var(--muted);font-size:.9rem;margin-top:.3rem}
+main{max-width:1000px;margin:0 auto;padding:1.5rem 1rem 6rem}
+.card{background:var(--card);border:2px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1rem}
+.card.drag{border-color:var(--acc2)}
+.drop{text-align:center;padding:2rem 1rem;border-style:dashed}
+.drop p{color:var(--muted);margin:.4rem 0 1rem}
+.row{display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap}
+.num{background:var(--acc2);color:#1a1a1a;font-weight:800;padding:.15rem .55rem;border-radius:6px;margin-right:.5rem}
+.muted{color:var(--muted);font-size:.85rem}
+.price{color:var(--acc2);font-weight:800}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:.9rem 0}
+label{display:flex;flex-direction:column;font-size:.75rem;color:var(--muted);font-weight:700;gap:.2rem}
+input[type=text],input[type=number],textarea{background:var(--bg);color:var(--text);border:2px solid var(--bd);border-radius:8px;padding:.5rem;font:inherit;font-size:.9rem}
+textarea{resize:vertical;min-height:3rem}
+input:focus,textarea:focus{outline:none;border-color:var(--acc)}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+.slot{border:2px dashed var(--bd);border-radius:10px;aspect-ratio:1;position:relative;overflow:hidden;cursor:pointer;display:grid;place-items:center;text-align:center;font-size:.8rem;color:var(--muted);background:var(--bg);padding:.3rem}
+.slot:hover{border-color:var(--acc)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.slot b{position:absolute;bottom:0;left:0;right:0;background:rgba(10,21,10,.88);color:var(--text);padding:.2rem;font-size:.68rem;word-break:break-all}
+.slot input{display:none}
+button{font:inherit;font-weight:800;cursor:pointer;border-radius:10px;border:none;padding:.55rem 1rem}
+.btn{background:var(--acc);color:#0a150a;box-shadow:0 4px 0 #3d9140}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn2{background:transparent;color:var(--acc);border:2px solid var(--acc)}
+.btn-x{background:transparent;color:#ff7b6b;border:2px solid #ff7b6b}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--hd);border-top:3px solid var(--bd);padding:.7rem 1rem;display:flex;justify-content:center;gap:.8rem;align-items:center;flex-wrap:wrap}
+dialog{background:var(--card);color:var(--text);border:2px solid var(--acc);border-radius:14px;padding:1.2rem;max-width:520px;width:92%;margin:auto}
+dialog::backdrop{background:rgba(0,0,0,.7)}
+dialog h3{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--acc);margin-bottom:.9rem}
+.opt{flex-direction:row;align-items:center;gap:.5rem;font-size:.9rem;color:var(--text);font-weight:700;padding:.2rem 0}
+.plist{max-height:220px;overflow:auto;border:2px solid var(--bd);border-radius:8px;padding:.4rem .6rem;margin:.5rem 0}
+.plist .opt{font-weight:400;font-size:.82rem}
+#status{color:var(--acc2);font-weight:700}
+@media(max-width:560px){.slots{grid-template-columns:repeat(2,1fr)}}
+select{font:inherit;padding:.5rem;border-radius:8px;border:2px solid var(--bd);background:var(--bg);color:inherit}
+.mv{padding:.25rem .6rem!important}
+.ex{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.6rem}
+.exi{border:2px solid var(--bd);border-radius:10px;padding:.4rem;background:var(--bg);display:grid;gap:.3rem;align-content:start;font-size:.7rem;word-break:break-all}
+.exi img,.exi video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;background:#000}
+.exb{display:flex;gap:.25rem;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <h1>⛏️ BlockyPops – Éditeur</h1>
+  <p>Charge l'index du site, modifie ou ajoute des items, puis télécharge le nouvel index et les photos.</p>
+</header>
+<main id="app"></main>
+<div class="bar" id="bar" hidden>
+  <span id="status"></span>
+  <button class="btn" onclick="openDl()">⬇️ Télécharger…</button>
+</div>
+<dialog id="dlg"></dialog>
+
+<script>
+const ANG=[['front','Face'],['right','Côté droit'],['left','Côté gauche'],['back','Dos']];
+const HINT={front:/face|front|avant/i,right:/droit|right/i,left:/gauche|left/i,back:/dos|back|arri/i};
+const SITE='https://twagirumukiza.github.io/BlockyPops/index.html';
+const COND={new:'Neuf',vgood:'Très bon état',good:'Bon état'};
+const pad=n=>String(n).padStart(2,'0');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slugify=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+let src='',start=-1,end=-1,products=[],defPrice=9.99,photos={},view='load',cur=null;
+
+/* ---------- Lecture de l'index ---------- */
+function parseIndex(text){
+  const m=text.match(/const products\s*=\s*\[/);
+  if(!m)throw new Error('Tableau "const products" introuvable dans ce fichier.');
+  const s=m.index+m[0].length-1;let d=0,q=null,e=-1;
+  for(let i=s;i<text.length;i++){
+    const c=text[i];
+    if(q){if(c==='\\')i++;else if(c===q)q=null;continue;}
+    if(c==='"'||c==="'"||c==='`')q=c;
+    else if(c==='[')d++;
+    else if(c===']'&&--d===0){e=i;break;}
+  }
+  if(e<0)throw new Error('Fin du tableau products introuvable.');
+  const arr=(new Function('return '+text.slice(s,e+1)))();
+  if(!Array.isArray(arr)||!arr.length)throw new Error('Aucun item trouvé.');
+  const p=text.match(/const PRICE\s*=\s*([\d.]+)/);
+  src=text;start=s;end=e;products=arr;products.forEach(x=>{x.mlist=(x.media||[]).map(n=>({old:n}));});defPrice=p?Number(p[1]):9.99;photos={};view='list';
+  render();
+}
+function loadText(t){try{parseIndex(t);}catch(err){alert('Erreur : '+err.message);}}
+function loadFile(f){if(f)f.text().then(loadText);}
+async function loadOnline(){
+  try{const r=await fetch(SITE,{cache:'no-store'});if(!r.ok)throw 0;loadText(await r.text());}
+  catch(e){alert("Impossible de charger le site en ligne. Choisis le fichier index.html à la place.");}
+}
+
+/* ---------- Écriture de l'index ---------- */
+function usedSlugs(except){return new Set(products.filter(p=>p!==except&&p.slug).map(p=>p.slug));}
+function newMedia(p){return (p.mlist||[]).filter(e=>e.file);}
+function assignMedia(p){
+  const L=p.mlist||[],used=new Set(L.filter(e=>e.old).map(e=>e.old));let n=1;
+  L.forEach(e=>{if(!e.file)return;
+    const v=e.file.type.startsWith('video/'),ext=v?((e.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4'):(/\.gif$/i.test(e.file.name)?'gif':'jpg');
+    let nm;do{nm=`${p.slug}-extra-${pad(n++)}.${ext}`;}while(used.has(nm));used.add(nm);e.name=nm;});
+  p.media=L.map(e=>e.old||e.name);
+  if(!p.media.length)delete p.media;
+}
+function ensureSlugs(){
+  products.forEach(p=>{
+    const has=Object.values(photos[p.id]||{}).some(Boolean)||newMedia(p).length;
+    if(has&&!p.slug){
+      const base=slugify(p.fr.name)||('item-'+pad(p.id));let s=base,n=2;const u=usedSlugs(p);
+      while(u.has(s))s=base+'-'+n++;p.slug=s;
+    }
+  });
+  products.forEach(p=>{if(p.slug||!newMedia(p).length)assignMedia(p);});
+}
+const q=JSON.stringify;
+function ser(p){
+  const t=l=>`{ name: ${q(l.name||'')}, desc: ${q(l.desc||'')}, tag: ${q(l.tag||'')} }`;
+  return `  {\n    id: ${p.id},\n`+(p.slug?`    slug: ${q(p.slug)},\n`:'')+(p.price!=null&&p.price!==''?`    price: ${Number(p.price)},\n`:'')+(p.cond&&COND[p.cond]?`    cond: ${q(p.cond)},\n`:'')+(p.stock===false?`    stock: false,\n`:'')+(p.media&&p.media.length?`    media: ${q(p.media)},\n`:'')+`    en: ${t(p.en)},\n    fr: ${t(p.fr)}\n  }`;
+}
+function productsCode(){
+  ensureSlugs();products.forEach(p=>{if(!p.en.name)p.en.name=p.fr.name;});
+  return 'const products = [\n'+products.map(ser).join(',\n')+'\n];';
+}
+function copyCode(){
+  const ta=document.getElementById('codeTa'),t=ta.value,st=document.getElementById('dlSt');
+  const manual=()=>{st.textContent='Code sélectionné : fais Ctrl+C (⌘+C sur Mac).';};
+  const fb=()=>{ta.focus();ta.select();ta.setSelectionRange(0,t.length);let ok=false;try{ok=document.execCommand('copy');}catch(e){}ok?(st.textContent='Code copié ✓'):manual();};
+  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(()=>{st.textContent='Code copié ✓';},fb);else fb();
+}
+function buildIndex(){
+  ensureSlugs();
+  products.forEach(p=>{if(!p.en.name)p.en.name=p.fr.name;});
+  return src.slice(0,start)+'[\n'+products.map(ser).join(',\n')+'\n]'+src.slice(end+1);
+}
+
+/* ---------- Interface ---------- */
+function photoCount(p){return Object.values(photos[p.id]||{}).filter(Boolean).length+newMedia(p).length;}
+function render(){
+  const app=document.getElementById('app');
+  document.getElementById('bar').hidden=view==='load';
+  if(view==='load'){
+    app.innerHTML=`<div class="card drop" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');loadFile(event.dataTransfer.files[0])">
+      <h2 style="font-size:1.1rem">1. Charge l'index de BlockyPops</h2>
+      <p>Glisse ici le fichier <code>index.html</code> du site, ou choisis-le.</p>
+      <button class="btn" onclick="document.getElementById('f').click()">📄 Choisir index.html</button>
+      <input id="f" type="file" accept=".html,text/html" hidden onchange="loadFile(this.files[0])">
+      <button class="btn2" onclick="loadOnline()">🌐 Charger depuis le site en ligne</button>
+    </div>`;
+    return;
+  }
+  if(view==='edit'){return renderEdit();}
+  app.innerHTML=`<div class="row" style="margin-bottom:1rem"><h2 style="font-size:1.1rem">${products.length} items détectés</h2>
+    <button class="btn" onclick="addItem()">➕ Ajouter un item</button></div>`+
+  products.map((p,i)=>`<div class="card row">
+    <div><span class="num">#${pad(p.id)}</span><b>${esc(p.fr.name)}</b> <span class="muted">/ ${esc(p.en.name)}</span><br>
+      <span class="muted">${esc(p.fr.tag)} · ${p.cond&&COND[p.cond]?COND[p.cond]+' · ':''}</span>${p.stock===false?'<b style="color:#ff7b6b">🚫 Épuisé</b><span class="muted"> · </span>':''}<span class="price">${p.price!=null&&p.price!==''?Number(p.price).toFixed(2):defPrice.toFixed(2)} €</span>
+      <span class="muted"> · ${p.slug?'photos individuelles':'photo de groupe'}${photoCount(p)?` · <b style="color:var(--acc)">${photoCount(p)} nouvelle(s)</b>`:''}</span></div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap"><button class="btn2 mv" title="Monter" ${i===0?'disabled':''} onclick="mv(${i},-1)">▲</button><button class="btn2 mv" title="Descendre" ${i===products.length-1?'disabled':''} onclick="mv(${i},1)">▼</button><button class="btn2" onclick="edit(${p.id})">✏️ Modifier</button></div></div>`).join('');
+  updStatus();
+}
+function updStatus(){
+  const n=products.reduce((a,p)=>a+photoCount(p),0);
+  document.getElementById('status').textContent=n?`${n} nouvelle(s) photo(s)`:'';
+}
+function mv(i,d){const j=i+d;if(j<0||j>=products.length)return;[products[i],products[j]]=[products[j],products[i]];render();}
+function setStock(v){const p=get(cur);if(v==='out')p.stock=false;else delete p.stock;}
+function setCond(v){const p=get(cur);if(v)p.cond=v;else delete p.cond;}
+function get(id){return products.find(p=>p.id===id);}
+function addItem(){
+  const id=Math.max(0,...products.map(p=>p.id))+1;
+  products.push({id,_new:true,en:{name:'',desc:'',tag:''},fr:{name:'',desc:'',tag:''}});
+  edit(id);
+}
+function edit(id){cur=id;view='edit';render();window.scrollTo(0,0);}
+function done(){
+  const p=get(cur);
+  if(p&&p._new&&!p.fr.name.trim()&&!photoCount(p))products=products.filter(x=>x!==p);
+  view='list';cur=null;render();
+}
+function removeNew(){products=products.filter(x=>x.id!==cur);delete photos[cur];view='list';cur=null;render();}
+function setF(lang,k,v){get(cur)[lang][k]=v;if(lang==='fr'&&k==='name')labels();}
+function setPrice(v){const p=get(cur);v=v.trim().replace(',','.');if(v===''||isNaN(v))delete p.price;else p.price=Number(v);}
+function setSlug(v){const p=get(cur);const s=slugify(v);if(s)p.slug=s;else delete p.slug;labels();}
+function slugPreview(p){return p.slug||slugify(p.fr.name)||('item-'+pad(p.id));}
+function labels(){const p=get(cur);document.querySelectorAll('.slot b').forEach(b=>b.textContent=slugPreview(p)+'-'+b.dataset.k+'.jpg');}
+function setPhoto(k,f){if(f&&f.type.startsWith('image/')){(photos[cur]=photos[cur]||{})[k]=f;renderEdit();}}
+function addMedia(list){
+  const p=get(cur);p.mlist=p.mlist||[];
+  [...list].filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/')).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).forEach(f=>p.mlist.push({file:f}));
+  renderEdit();
+}
+function mvMedia(i,d){const L=get(cur).mlist,j=i+d;if(j<0||j>=L.length)return;[L[i],L[j]]=[L[j],L[i]];renderEdit();}
+function delMedia(i){get(cur).mlist.splice(i,1);renderEdit();}
+function fillMany(list){
+  const p=get(cur),ph=photos[cur]=photos[cur]||{};p.mlist=p.mlist||[];
+  const all=[...list].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  const imgs=all.filter(f=>f.type.startsWith('image/')),vids=all.filter(f=>f.type.startsWith('video/')),rest=[];
+  for(const f of imgs){const k=ANG.map(a=>a[0]).find(k=>HINT[k].test(f.name)&&!ph[k]);if(k)ph[k]=f;else rest.push(f);}
+  for(const f of rest){const k=ANG.map(a=>a[0]).find(k=>!ph[k]);if(k)ph[k]=f;else p.mlist.push({file:f});}
+  vids.forEach(f=>p.mlist.push({file:f}));
+  renderEdit();
+}
+function extraHtml(p){
+  const L=p.mlist||[];
+  return `<div class="row" style="margin:1.2rem 0 .5rem"><b>Photos et vidéos supplémentaires (${L.length})</b><button class="btn2" onclick="document.getElementById('mx').click()">➕ Ajouter photos / vidéos</button><input id="mx" type="file" accept="image/*,video/*" multiple hidden onchange="addMedia(this.files)"></div>
+  <div class="ex">${L.map((e,i)=>`<div class="exi">${e.file?(e.file.type.startsWith('video/')?`<video src="${URL.createObjectURL(e.file)}" muted preload="metadata"></video>`:`<img src="${URL.createObjectURL(e.file)}" alt="">`):`<span class="muted">${esc(e.old)}<br>(déjà en ligne)</span>`}${e.file?`<small>🆕 ${esc(e.file.name)}</small>`:''}<div class="exb"><button class="btn2 mv" ${i===0?'disabled':''} onclick="mvMedia(${i},-1)">◀</button><button class="btn2 mv" ${i===L.length-1?'disabled':''} onclick="mvMedia(${i},1)">▶</button><button class="btn-x" onclick="delMedia(${i})">✕</button></div></div>`).join('')}</div>
+  <p class="muted" style="margin-top:.4rem">Autant que tu veux : photos, GIF, vidéos MP4/WebM. Glisse-les sur la fiche : les 4 premières photos vont aux angles, le reste ici. Astuce : vidéos sous 25 Mo pour l'envoi sur GitHub depuis le navigateur.</p>`;
+}
+function renderEdit(){
+  const p=get(cur),ph=photos[cur]||{};
+  const inp=(l,lang,k,ph2,area)=>`<label>${l}${area?`<textarea oninput="setF('${lang}','${k}',this.value)">${esc(p[lang][k])}</textarea>`:`<input type="text" value="${esc(p[lang][k])}" placeholder="${ph2||''}" oninput="setF('${lang}','${k}',this.value)">`}</label>`;
+  document.getElementById('app').innerHTML=`<div class="card" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');fillMany(event.dataTransfer.files)">
+    <div class="row"><h2 style="font-size:1.1rem"><span class="num">#${pad(p.id)}</span>${p._new?'Nouvel item':'Modifier l\'item'}</h2>
+      <div>${p._new?'<button class="btn-x" onclick="removeNew()">✕ Supprimer</button> ':''}<button class="btn" onclick="done()">✔ Terminer</button></div></div>
+    <div class="fields">
+      ${inp('Nom (français) *','fr','name','ex. Coffre Pixel Doré')}${inp('Nom (anglais)','en','name','= français si vide')}
+      ${inp('Description FR','fr','desc','',1)}${inp('Description EN','en','desc','',1)}
+      ${inp('Tag FR','fr','tag','ex. Éclat rare')}${inp('Tag EN','en','tag','ex. Rare shine')}
+      <label>Prix (€) — vide = prix par défaut (${defPrice})<input type="number" step="0.01" min="0" value="${p.price??''}" oninput="setPrice(this.value)"></label>
+      <label>État de l'item<select onchange="setCond(this.value)"><option value="">— non précisé —</option>${Object.entries(COND).map(([k,v])=>`<option value="${k}" ${p.cond===k?'selected':''}>${v}</option>`).join('')}</select></label>
+      <label>Disponibilité<select onchange="setStock(this.value)"><option value="in">✅ En stock</option><option value="out" ${p.stock===false?'selected':''}>🚫 Épuisé</option></select></label>
+      <label>Nom des fichiers photos (slug)<input type="text" value="${esc(p.slug||'')}" placeholder="auto : ${esc(slugPreview(p))}" onchange="setSlug(this.value)"></label>
+    </div>
+    <div class="row" style="margin-bottom:.5rem"><b>Photos</b><button class="btn2" onclick="document.getElementById('multi').click()">📁 Choisir les photos</button>
+      <input id="multi" type="file" accept="image/*" multiple hidden onchange="fillMany(this.files)"></div>
+    <div class="slots">${ANG.map(([k,l])=>{const f=ph[k];
+      return `<label class="slot">${f?`<img src="${URL.createObjectURL(f)}" alt="">`:`<span>＋ ${l}${p.slug&&!p._new?'<br>(déjà en ligne)':''}</span>`}<b data-k="${k}">${esc(slugPreview(p))}-${k}.jpg</b>
+        <input type="file" accept="image/*" onchange="setPhoto('${k}',this.files[0])"></label>`;}).join('')}</div>
+    ${extraHtml(p)}
+    <p class="muted" style="margin-top:.6rem">Glisse les 4 photos d'un coup sur ce cadre (noms avec face/droit/gauche/dos placés automatiquement). Une photo laissée vide reste inchangée sur le site.</p>
+  </div>`;
+  updStatus();
+}
+
+/* ---------- Téléchargement ---------- */
+function photoJobs(){
+  ensureSlugs();const j=[];
+  products.forEach(p=>{ANG.forEach(([k])=>{const f=(photos[p.id]||{})[k];if(f)j.push({name:`${p.slug}-${k}.jpg`,file:f});});newMedia(p).forEach(e=>j.push({name:e.name,file:e.file}));});
+  return j;
+}
+function openDl(){
+  const j=photoJobs(),d=document.getElementById('dlg');
+  d.innerHTML=`<h3>Télécharger</h3>
+    <label class="opt"><input type="checkbox" id="dlIdx" checked> L'index (index.html mis à jour)</label>
+    <label class="opt"><input type="checkbox" id="dlPh" ${j.length?'checked':'disabled'} onchange="document.getElementById('phBox').hidden=!this.checked"> Les photos (ZIP du dossier images/) — ${j.length} nouvelle(s)</label>
+    <div id="phBox" ${j.length?'':'hidden'}>
+      <div class="row"><span class="muted">Lesquelles ?</span><span><button class="btn2" style="padding:.15rem .6rem" onclick="tick(true)">Toutes</button> <button class="btn2" style="padding:.15rem .6rem" onclick="tick(false)">Aucune</button></span></div>
+      <div class="plist">${j.map((x,i)=>`<label class="opt"><input type="checkbox" class="pc" data-i="${i}" checked> ${esc(x.name)}</label>`).join('')}</div>
+      <label class="opt">Largeur max. (px) <input type="number" id="maxw" value="1000" min="300" max="4000" step="100" style="width:5.5rem"></label>
+    </div>
+    <div style="margin-top:.8rem"><div class="row"><span class="muted">Ou copier le code (à coller dans index.html à la place de <code>const products = [...]</code>)</span><button class="btn2" style="padding:.15rem .6rem" onclick="copyCode()">📋 Copier</button></div><textarea id="codeTa" readonly rows="5" style="width:100%;margin-top:.4rem;font-family:monospace;font-size:.75rem" onclick="this.select()">${esc(productsCode())}</textarea></div>
+    <div class="row" style="margin-top:1rem"><span id="dlSt" class="muted"></span><span><button class="btn2" onclick="this.closest('dialog').close()">Fermer</button> <button class="btn" onclick="doDl()">Télécharger</button></span></div>`;
+  d.showModal();
+}
+function tick(v){document.querySelectorAll('.pc').forEach(c=>c.checked=v);}
+function dlBlob(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
+async function doDl(){
+  const st=document.getElementById('dlSt');
+  if(document.getElementById('dlIdx').checked)dlBlob(new Blob([buildIndex()],{type:'text/html'}),'index.html');
+  const ph=document.getElementById('dlPh');
+  if(ph&&ph.checked){
+    const j=photoJobs(),sel=[...document.querySelectorAll('.pc')].filter(c=>c.checked).map(c=>j[c.dataset.i]);
+    if(sel.length){
+      const mw=Math.max(300,Number(document.getElementById('maxw').value)||1000),files=[];
+      try{for(let i=0;i<sel.length;i++){st.textContent=`Photo ${i+1}/${sel.length}…`;files.push({name:'images/'+sel[i].name,data:await prep(sel[i],mw)});}}
+      catch(e){st.textContent='Erreur : une photo est illisible (HEIC non supporté ?).';return;}
+      dlBlob(makeZip(files),'images.zip');
+    }
+  }
+  st.textContent='Téléchargement lancé ✓';
+}
+async function prep(j,mw){return /\.jpg$/.test(j.name)?toJpeg(j.file,mw):new Uint8Array(await j.file.arrayBuffer());}
+async function toJpeg(file,maxW){
+  const bmp=await createImageBitmap(file),s=Math.min(1,maxW/bmp.width),c=document.createElement('canvas');
+  c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.85));return new Uint8Array(await b.arrayBuffer());
+}
+const CRC=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=-1;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(c^-1)>>>0;}
+function makeZip(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  const d=new Date(),dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate(),tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
+  for(const f of files){
+    const n=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length,lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(10,tm,true);lh.setUint16(12,dt,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,sz,true);lh.setUint32(22,sz,true);lh.setUint16(26,n.length,true);
+    parts.push(lh.buffer,n,f.data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(12,tm,true);ch.setUint16(14,dt,true);
+    ch.setUint32(16,crc,true);ch.setUint32(20,sz,true);ch.setUint32(24,sz,true);ch.setUint16(28,n.length,true);ch.setUint32(42,off,true);
+    central.push(ch.buffer,n);off+=30+n.length+sz;
+  }
+  const cs=central.reduce((a,b)=>a+b.byteLength,0),e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...central,e.buffer],{type:'application/zip'});
+}
+render();
+</script>
+</body>
+</html>
