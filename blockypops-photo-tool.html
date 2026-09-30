@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlockyPops – Préparateur de photos</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1a0f;--card:#1a2a1a;--text:#e8f5e9;--muted:#a0b8a0;--acc:#5cdb5c;--acc2:#ffd54f;--bd:#2a4a2a;--hd:#0a150a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+header{background:var(--hd);padding:1rem 1.5rem;border-bottom:3px solid var(--bd)}
+header h1{font-family:'Press Start 2P',monospace;font-size:.9rem;line-height:1.5}
+header p{color:var(--muted);font-size:.9rem;margin-top:.3rem}
+main{max-width:1100px;margin:0 auto;padding:1.5rem 1rem 4rem}
+.opts{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:1.2rem;color:var(--muted);font-size:.9rem}
+.opts input{width:5rem;background:var(--card);color:var(--text);border:2px solid var(--bd);border-radius:6px;padding:.3rem .5rem}
+.item{background:var(--card);border:2px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1.2rem}
+.item.drag{border-color:var(--acc2)}
+.ihead{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;gap:.5rem;flex-wrap:wrap}
+.num{background:var(--acc2);color:#1a1a1a;font-weight:800;padding:.2rem .6rem;border-radius:6px}
+.count{color:var(--muted);font-size:.85rem}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem;margin-bottom:.9rem}
+label{display:flex;flex-direction:column;font-size:.75rem;color:var(--muted);font-weight:700;gap:.2rem}
+input[type=text],textarea{background:var(--bg);color:var(--text);border:2px solid var(--bd);border-radius:8px;padding:.5rem;font:inherit;font-size:.9rem}
+textarea{resize:vertical;min-height:2.6rem}
+input:focus,textarea:focus{outline:none;border-color:var(--acc)}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+.slot{border:2px dashed var(--bd);border-radius:10px;aspect-ratio:1;position:relative;overflow:hidden;cursor:pointer;display:grid;place-items:center;text-align:center;font-size:.8rem;color:var(--muted);background:var(--bg)}
+.slot:hover{border-color:var(--acc)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.slot b{position:absolute;bottom:0;left:0;right:0;background:rgba(10,21,10,.85);color:var(--text);padding:.2rem;font-size:.75rem}
+.slot input{display:none}
+.hint{color:var(--muted);font-size:.8rem;margin-top:.5rem}
+button{font:inherit;font-weight:800;cursor:pointer;border-radius:10px;border:none;padding:.6rem 1rem}
+.btn{background:var(--acc);color:#0a150a;box-shadow:0 4px 0 #3d9140}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn2{background:transparent;color:var(--acc);border:2px solid var(--acc)}
+.btn-x{background:transparent;color:#ff7b6b;border:2px solid #ff7b6b;padding:.25rem .6rem;font-size:.8rem}
+.actions{display:flex;gap:.8rem;flex-wrap:wrap;margin:1rem 0 1.8rem}
+h2{font-family:'Press Start 2P',monospace;font-size:.75rem;margin:1.4rem 0 .6rem;color:var(--acc)}
+pre{background:var(--hd);border:2px solid var(--bd);border-radius:10px;padding:.9rem;overflow:auto;max-height:280px;font-size:.78rem;color:#cfe8cf;white-space:pre}
+.row{display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+.steps{color:var(--muted);font-size:.9rem;padding-left:1.2rem;margin-top:.5rem}
+.steps li{margin-bottom:.3rem}
+#status{color:var(--acc2);font-weight:700;margin-left:.5rem}
+@media(max-width:560px){.slots{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>⛏️ BlockyPops – Préparateur de photos</h1>
+  <p>Donne le nom de chaque item et ses 4 photos : l'outil renomme tout, prépare le ZIP du dossier <code>images/</code> et le code à coller.</p>
+</header>
+<main>
+  <div class="opts">
+    <span>Largeur max. des photos (px) <input type="number" id="maxw" value="1000" min="300" max="4000" step="100"></span>
+    <span>Prix (€) <input type="number" id="price" value="9.99" step="0.01" disabled title="Le prix est géré dans index.html"></span>
+  </div>
+  <div id="items"></div>
+  <div class="actions">
+    <button class="btn2" onclick="addItem()">➕ Ajouter un item</button>
+    <button class="btn" onclick="downloadZip()">📦 Télécharger le ZIP des photos</button>
+    <span id="status"></span>
+  </div>
+
+  <h2>1. Code des produits</h2>
+  <div class="row"><span class="hint">Dans index.html, remplace tout le tableau <code>const products = [ ... ];</code> par :</span><button class="btn2" onclick="copyCode('codeProducts',this)">Copier</button></div>
+  <pre id="codeProducts"></pre>
+
+  <h2>2. Réglage des photos</h2>
+  <div class="row"><span class="hint">Remplace la ligne <code>const PER_ITEM_IMAGES = false;</code> par :</span><button class="btn2" onclick="copyCode('codeFlag',this)">Copier</button></div>
+  <pre id="codeFlag">const PER_ITEM_IMAGES = true;</pre>
+
+  <h2>3. Mise en place</h2>
+  <ol class="steps">
+    <li>Télécharge le ZIP puis décompresse-le : tu obtiens un dossier <code>images/</code>.</li>
+    <li>Place ce dossier à côté de <code>index.html</code> (sur GitHub : à la racine du dépôt).</li>
+    <li>Colle les deux blocs de code ci-dessus dans <code>index.html</code>, puis enregistre.</li>
+  </ol>
+</main>
+
+<script>
+const ANGLES=[['front','Face'],['right','Côté droit'],['left','Côté gauche'],['back','Dos']];
+const HINTS={front:/face|front|avant/i,right:/droit|right/i,left:/gauche|left/i,back:/dos|back|arri/i};
+let items=[];
+const pad=n=>String(n).padStart(2,'0');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const newItem=()=>({fr:'',en:'',descFr:'',descEn:'',tagFr:'',tagEn:'',photos:{front:null,right:null,left:null,back:null}});
+
+function addItem(){items.push(newItem());render();}
+function removeItem(i){items.splice(i,1);render();}
+function setF(i,k,v){items[i][k]=v;updateCode();}
+
+function setPhoto(i,key,file){if(file&&file.type.startsWith('image/')){items[i].photos[key]=file;render();}}
+function fillMany(i,fileList){
+  const files=[...fileList].filter(f=>f.type.startsWith('image/')).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  const rest=[];
+  for(const f of files){
+    const k=ANGLES.map(a=>a[0]).find(k=>HINTS[k].test(f.name)&&!items[i].photos[k]);
+    if(k)items[i].photos[k]=f;else rest.push(f);
+  }
+  for(const f of rest){const k=ANGLES.map(a=>a[0]).find(k=>!items[i].photos[k]);if(k)items[i].photos[k]=f;}
+  render();
+}
+
+function render(){
+  const box=document.getElementById('items');
+  if(!items.length)items.push(newItem());
+  box.innerHTML=items.map((it,i)=>{
+    const n=Object.values(it.photos).filter(Boolean).length;
+    return `<div class="item" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');fillMany(${i},event.dataTransfer.files)">
+      <div class="ihead"><div><span class="num">#${pad(i+1)}</span> <span class="count">${n}/4 photos</span></div>
+        <div><button class="btn2" style="padding:.25rem .7rem;font-size:.8rem" onclick="document.getElementById('multi${i}').click()">📁 Choisir les photos</button>
+        <input type="file" id="multi${i}" accept="image/*" multiple hidden onchange="fillMany(${i},this.files)">
+        <button class="btn-x" onclick="removeItem(${i})">✕ Retirer</button></div></div>
+      <div class="fields">
+        <label>Nom (français) *<input type="text" value="${esc(it.fr)}" oninput="setF(${i},'fr',this.value)" placeholder="ex. Coffre Pixel Doré"></label>
+        <label>Nom (anglais)<input type="text" value="${esc(it.en)}" oninput="setF(${i},'en',this.value)" placeholder="= français si vide"></label>
+        <label>Description FR<textarea oninput="setF(${i},'descFr',this.value)">${esc(it.descFr)}</textarea></label>
+        <label>Description EN<textarea oninput="setF(${i},'descEn',this.value)">${esc(it.descEn)}</textarea></label>
+        <label>Tag FR<input type="text" value="${esc(it.tagFr)}" oninput="setF(${i},'tagFr',this.value)" placeholder="ex. Éclat rare"></label>
+        <label>Tag EN<input type="text" value="${esc(it.tagEn)}" oninput="setF(${i},'tagEn',this.value)" placeholder="ex. Rare shine"></label>
+      </div>
+      <div class="slots">${ANGLES.map(([k,l])=>{
+        const f=it.photos[k];
+        return `<label class="slot">${f?`<img src="${URL.createObjectURL(f)}" alt="">`:`<span>＋ ${l}</span>`}<b>${l} → item-${pad(i+1)}-${k}.jpg</b>
+          <input type="file" accept="image/*" onchange="setPhoto(${i},'${k}',this.files[0])"></label>`;}).join('')}</div>
+      <p class="hint">Astuce : glisse tes 4 photos d'un coup sur ce cadre. Les noms contenant face/droit/gauche/dos (ou front/right/left/back) sont placés automatiquement, sinon l'ordre alphabétique est utilisé.</p>
+    </div>`;
+  }).join('');
+  updateCode();
+}
+
+function updateCode(){
+  const q=JSON.stringify;
+  const body=items.map((it,i)=>{
+    const fr=it.fr.trim()||('Item '+(i+1));
+    const en=it.en.trim()||fr;
+    return `  {
+    id: ${i+1},
+    en: { name: ${q(en)}, desc: ${q(it.descEn.trim())}, tag: ${q(it.tagEn.trim())} },
+    fr: { name: ${q(fr)}, desc: ${q(it.descFr.trim())}, tag: ${q(it.tagFr.trim())} }
+  }`;}).join(',\n');
+  document.getElementById('codeProducts').textContent=`const products = [\n${body}\n];`;
+}
+
+function copyCode(id,btn){
+  const t=document.getElementById(id).textContent;
+  const done=()=>{const o=btn.textContent;btn.textContent='Copié ✓';setTimeout(()=>btn.textContent=o,1500);};
+  if(navigator.clipboard)navigator.clipboard.writeText(t).then(done,()=>fallbackCopy(t,done));else fallbackCopy(t,done);
+}
+function fallbackCopy(t,done){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();done();}
+
+// ---------- Image → JPEG ----------
+async function toJpeg(file,maxW){
+  const bmp=await createImageBitmap(file);
+  const s=Math.min(1,maxW/bmp.width);
+  const c=document.createElement('canvas');
+  c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.85));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+// ---------- Minimal ZIP writer (no compression) ----------
+const CRC=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=-1;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(c^-1)>>>0;}
+function makeZip(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  const d=new Date(),dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate(),tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
+  for(const f of files){
+    const n=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(10,tm,true);lh.setUint16(12,dt,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,sz,true);lh.setUint32(22,sz,true);lh.setUint16(26,n.length,true);
+    parts.push(lh.buffer,n,f.data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(12,tm,true);ch.setUint16(14,dt,true);
+    ch.setUint32(16,crc,true);ch.setUint32(20,sz,true);ch.setUint32(24,sz,true);ch.setUint16(28,n.length,true);ch.setUint32(42,off,true);
+    central.push(ch.buffer,n);
+    off+=30+n.length+sz;
+  }
+  const cs=central.reduce((a,b)=>a+b.byteLength,0);
+  const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...central,e.buffer],{type:'application/zip'});
+}
+
+async function downloadZip(){
+  const st=document.getElementById('status');
+  const maxW=Math.max(300,Number(document.getElementById('maxw').value)||1000);
+  const jobs=[];
+  items.forEach((it,i)=>ANGLES.forEach(([k])=>{if(it.photos[k])jobs.push({name:`images/item-${pad(i+1)}-${k}.jpg`,file:it.photos[k]});}));
+  if(!jobs.length){st.textContent='Ajoute au moins une photo.';return;}
+  const files=[];
+  try{
+    for(let j=0;j<jobs.length;j++){
+      st.textContent=`Traitement ${j+1}/${jobs.length}…`;
+      files.push({name:jobs[j].name,data:await toJpeg(jobs[j].file,maxW)});
+    }
+  }catch(e){st.textContent='Erreur : une photo n\'a pas pu être lue (HEIC non supporté ?).';return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(makeZip(files));a.download='images.zip';a.click();
+  const missing=items.reduce((n,it)=>n+Object.values(it.photos).filter(p=>!p).length,0);
+  st.textContent=`ZIP prêt (${files.length} photos)${missing?` – ${missing} angle(s) manquant(s)`:''}.`;
+}
+
+render();
+</script>
+</body>
+</html>
